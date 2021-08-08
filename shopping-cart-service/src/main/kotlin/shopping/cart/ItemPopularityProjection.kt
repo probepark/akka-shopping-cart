@@ -32,9 +32,10 @@ sealed class ItemPopularityProjection {
                             ProjectionBehavior.Command::class.java,
                             "ItemPopularityProjection",
                             ShoppingCart.TAGS.size,
-                            { index: Int ->
+                            { index ->
                                 ProjectionBehavior.create(
-                                        createProjectionFor(system, transactionManager, repository, index))
+                                    createProjectionFor(system, transactionManager, repository, index)
+                                )
                             },
                             ShardedDaemonProcessSettings.create(system),
                             Optional.of(ProjectionBehavior.stopMessage()))

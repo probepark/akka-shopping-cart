@@ -39,6 +39,7 @@ object Main {
         val transactionManager = springContext.getBean(JpaTransactionManager::class.java)
 
         ItemPopularityProjection.init(system, transactionManager, itemPopularityRepository)
+        PublishEventsProjection.init(system, transactionManager);
 
         startGrpcServer(system, itemPopularityRepository)
     }
