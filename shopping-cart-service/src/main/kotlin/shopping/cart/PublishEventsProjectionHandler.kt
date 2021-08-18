@@ -13,7 +13,10 @@ import shopping.cart.proto.CheckedOut
 import shopping.cart.proto.ItemAdded
 import java.util.concurrent.CompletionStage
 
-class PublishEventsProjectionHandler(val topic: String, val sendProducer: SendProducer<String, ByteArray>) :
+class PublishEventsProjectionHandler(
+    private val topic: String,
+    private val sendProducer: SendProducer<String, ByteArray>
+) :
     Handler<EventEnvelope<ShoppingCart.Event>>() {
 
     private val logger: Logger = LoggerFactory.getLogger(javaClass)

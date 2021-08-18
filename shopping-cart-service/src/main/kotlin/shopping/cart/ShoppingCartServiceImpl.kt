@@ -16,8 +16,6 @@ import shopping.cart.repository.ItemPopularityRepository
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeoutException
-import java.util.function.Function
-import java.util.function.Supplier
 
 
 class ShoppingCartServiceImpl(system: ActorSystem<*>, private val itemPopularityRepository: ItemPopularityRepository) :

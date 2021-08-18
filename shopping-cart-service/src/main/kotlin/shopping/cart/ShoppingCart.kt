@@ -20,10 +20,11 @@ import java.util.*
 import kotlin.math.abs
 
 
-class ShoppingCart private constructor(private val cartId: String, val projectionTag: String) :
-        EventSourcedBehaviorWithEnforcedReplies<Command, Event, State>(
-                PersistenceId.of(ENTITY_KEY.name(), cartId),
-                SupervisorStrategy.restartWithBackoff(ofMillis(200), ofSeconds(5), 0.1)) {
+class ShoppingCart private constructor(private val cartId: String, private val projectionTag: String) :
+    EventSourcedBehaviorWithEnforcedReplies<Command, Event, State>(
+        PersistenceId.of(ENTITY_KEY.name(), cartId),
+        SupervisorStrategy.restartWithBackoff(ofMillis(200), ofSeconds(5), 0.1)
+    ) {
 
     companion object {
         val ENTITY_KEY: EntityTypeKey<Command> = EntityTypeKey.create(Command::class.java, "ShoppingCart")
@@ -39,7 +40,7 @@ class ShoppingCart private constructor(private val cartId: String, val projectio
         fun create(cartId: String, projectionTag: String = getSelectedTag(cartId)): Behavior<Command> {
             return Behaviors.setup { ctx ->
                 EventSourcedBehavior
-                        .start(ShoppingCart(cartId, projectionTag), ctx)
+                    .start(ShoppingCart(cartId, projectionTag), ctx)
             }
         }
 
@@ -56,13 +57,15 @@ class ShoppingCart private constructor(private val cartId: String, val projectio
 
     data class RemoveItem(val itemId: String, val replyTo: ActorRef<StatusReply<Summary>>) : Command
 
-    data class AdjustItemQuantity(val itemId: String, val quantity: Int, val replyTo: ActorRef<StatusReply<Summary>>) : Command
+    data class AdjustItemQuantity(val itemId: String, val quantity: Int, val replyTo: ActorRef<StatusReply<Summary>>) :
+        Command
 
     data class Checkout @JsonCreator constructor(val replyTo: ActorRef<StatusReply<Summary>>) : Command
 
     data class Get @JsonCreator constructor(val replyTo: ActorRef<Summary>) : Command
 
-    data class Summary @JsonCreator constructor(val items: Map<String, Int>, val checkedOut: Boolean = false) : CborSerializable
+    data class Summary @JsonCreator constructor(val items: Map<String, Int>, val checkedOut: Boolean = false) :
+        CborSerializable
 
     // events
     sealed class Event(open val cartId: String) : CborSerializable
@@ -76,7 +79,10 @@ class ShoppingCart private constructor(private val cartId: String, val projectio
     data class CheckedOut(override val cartId: String, val eventTime: Instant) : Event(cartId)
 
     // state
-    class State(private val items: MutableMap<String, Int> = mutableMapOf(), private var checkoutDate: Optional<Instant> = Optional.empty()) : CborSerializable {
+    class State(
+        private val items: MutableMap<String, Int> = mutableMapOf(),
+        private var checkoutDate: Optional<Instant> = Optional.empty()
+    ) : CborSerializable {
 
         fun itemExists(itemId: String): Boolean = items.containsKey(itemId)
 
@@ -112,19 +118,24 @@ class ShoppingCart private constructor(private val cartId: String, val projectio
 
     override fun commandHandler(): CommandHandlerWithReply<Command, Event, State> {
         return openShoppingCart()
-                .orElse(checkedOutShoppingCart())
-                .orElse(getCommandHandler())
-                .build()
+            .orElse(checkedOutShoppingCart())
+            .orElse(getCommandHandler())
+            .build()
     }
 
     override fun eventHandler(): EventHandler<State, Event> {
         return newEventHandlerBuilder()
-                .forAnyState()
-                .onEvent(ItemAdded::class.java) { state, event -> state.updateItemQuantity(event.itemId, event.quantity) }
-                .onEvent(ItemRemoved::class.java) { state, event -> state.updateItemQuantity(event.itemId, 0) }
-                .onEvent(ItemQuantityAdjusted::class.java) { state, event -> state.updateItemQuantity(event.itemId, event.quantity) }
-                .onEvent(CheckedOut::class.java) { state, event -> state.checkout(event.eventTime) }
-                .build()
+            .forAnyState()
+            .onEvent(ItemAdded::class.java) { state, event -> state.updateItemQuantity(event.itemId, event.quantity) }
+            .onEvent(ItemRemoved::class.java) { state, event -> state.updateItemQuantity(event.itemId, 0) }
+            .onEvent(ItemQuantityAdjusted::class.java) { state, event ->
+                state.updateItemQuantity(
+                    event.itemId,
+                    event.quantity
+                )
+            }
+            .onEvent(CheckedOut::class.java) { state, event -> state.checkout(event.eventTime) }
+            .build()
     }
 
     override fun retentionCriteria(): RetentionCriteria {
@@ -137,48 +148,60 @@ class ShoppingCart private constructor(private val cartId: String, val projectio
 
     private fun openShoppingCart(): CommandHandlerWithReplyBuilderByState<Command, Event, State, State> {
         return newCommandHandlerWithReplyBuilder()
-                .forState { state -> !state.isCheckedOut() }
-                .onCommand(AddItem::class.java, this::onAddItem)
-                .onCommand(RemoveItem::class.java, this::onRemoveItem)
-                .onCommand(AdjustItemQuantity::class.java, this::onAdjustItemQuantity)
-                .onCommand(Checkout::class.java, this::onCheckout)
+            .forState { state -> !state.isCheckedOut() }
+            .onCommand(AddItem::class.java, this::onAddItem)
+            .onCommand(RemoveItem::class.java, this::onRemoveItem)
+            .onCommand(AdjustItemQuantity::class.java, this::onAdjustItemQuantity)
+            .onCommand(Checkout::class.java, this::onCheckout)
     }
 
     private fun checkedOutShoppingCart(): CommandHandlerWithReplyBuilderByState<Command, Event, State, State> {
         return newCommandHandlerWithReplyBuilder()
-                .forState(State::isCheckedOut)
-                .onCommand(AddItem::class.java) { cmd ->
-                    Effect().reply(cmd.replyTo, StatusReply.error("Can't add an item to an already checked out shopping cart"))
-                }
-                .onCommand(RemoveItem::class.java) { cmd ->
-                    Effect().reply(cmd.replyTo, StatusReply.error("Can't remove an item from an already checked out shopping cart"))
-                }
-                .onCommand(AdjustItemQuantity::class.java) { cmd ->
-                    Effect().reply(cmd.replyTo, StatusReply.error("Can't adjust the quantity of an item from an already checked out shopping cart"))
-                }
-                .onCommand(Checkout::class.java) { cmd ->
-                    Effect().reply(cmd.replyTo, StatusReply.error("Can't checkout already checked out shopping cart"))
-                }
+            .forState(State::isCheckedOut)
+            .onCommand(AddItem::class.java) { cmd ->
+                Effect().reply(
+                    cmd.replyTo,
+                    StatusReply.error("Can't add an item to an already checked out shopping cart")
+                )
+            }
+            .onCommand(RemoveItem::class.java) { cmd ->
+                Effect().reply(
+                    cmd.replyTo,
+                    StatusReply.error("Can't remove an item from an already checked out shopping cart")
+                )
+            }
+            .onCommand(AdjustItemQuantity::class.java) { cmd ->
+                Effect().reply(
+                    cmd.replyTo,
+                    StatusReply.error("Can't adjust the quantity of an item from an already checked out shopping cart")
+                )
+            }
+            .onCommand(Checkout::class.java) { cmd ->
+                Effect().reply(cmd.replyTo, StatusReply.error("Can't checkout already checked out shopping cart"))
+            }
     }
 
     private fun getCommandHandler(): CommandHandlerWithReplyBuilderByState<Command, Event, State, State>? {
         return newCommandHandlerWithReplyBuilder()
-                .forAnyState()
-                .onCommand(Get::class.java, this::onGetItem)
+            .forAnyState()
+            .onCommand(Get::class.java, this::onGetItem)
     }
 
     private fun onAddItem(state: State, cmd: AddItem): ReplyEffect<Event, State> {
         return when {
             state.itemExists(cmd.itemId) -> {
-                Effect().reply(cmd.replyTo, StatusReply.error("Item '${cmd.itemId}' was already added to this shopping cart"))
+                Effect().reply(
+                    cmd.replyTo,
+                    StatusReply.error("Item '${cmd.itemId}' was already added to this shopping cart")
+                )
             }
             cmd.quantity <= 0 -> {
                 Effect().reply(cmd.replyTo, StatusReply.error("Quantity must be greater than zero"))
             }
             else -> {
                 Effect()
-                        .persist(ItemAdded(cartId, cmd.itemId, cmd.quantity))
-                        .thenReply(cmd.replyTo) { updatedCart -> StatusReply.success(updatedCart.toSummary()) }
+                    .persist(ItemAdded(cartId, cmd.itemId, cmd.quantity))
+                    .thenReply(cmd.replyTo) { updatedCart -> StatusReply.success(updatedCart.toSummary()) }
             }
         }
     }
@@ -186,12 +209,15 @@ class ShoppingCart private constructor(private val cartId: String, val projectio
     private fun onRemoveItem(state: State, cmd: RemoveItem): ReplyEffect<Event, State> {
         return when {
             state.itemDoesNotExist(cmd.itemId) -> {
-                Effect().reply(cmd.replyTo, StatusReply.error("Item '${cmd.itemId}' does not exist in the shopping cart"))
+                Effect().reply(
+                    cmd.replyTo,
+                    StatusReply.error("Item '${cmd.itemId}' does not exist in the shopping cart")
+                )
             }
             else -> {
                 Effect()
-                        .persist(ItemRemoved(cartId, cmd.itemId))
-                        .thenReply(cmd.replyTo) { updatedCart -> StatusReply.success(updatedCart.toSummary()) }
+                    .persist(ItemRemoved(cartId, cmd.itemId))
+                    .thenReply(cmd.replyTo) { updatedCart -> StatusReply.success(updatedCart.toSummary()) }
             }
         }
     }
@@ -199,15 +225,18 @@ class ShoppingCart private constructor(private val cartId: String, val projectio
     private fun onAdjustItemQuantity(state: State, cmd: AdjustItemQuantity): ReplyEffect<Event, State> {
         return when {
             state.itemDoesNotExist(cmd.itemId) -> {
-                Effect().reply(cmd.replyTo, StatusReply.error("Item '${cmd.itemId}' does not exist in the shopping cart"))
+                Effect().reply(
+                    cmd.replyTo,
+                    StatusReply.error("Item '${cmd.itemId}' does not exist in the shopping cart")
+                )
             }
             cmd.quantity <= 0 -> {
                 Effect().reply(cmd.replyTo, StatusReply.error("Quantity must be greater than zero"))
             }
             else -> {
                 Effect()
-                        .persist(ItemQuantityAdjusted(cartId, cmd.itemId, cmd.quantity))
-                        .thenReply(cmd.replyTo) { updatedCart -> StatusReply.success(updatedCart.toSummary()) }
+                    .persist(ItemQuantityAdjusted(cartId, cmd.itemId, cmd.quantity))
+                    .thenReply(cmd.replyTo) { updatedCart -> StatusReply.success(updatedCart.toSummary()) }
             }
         }
     }
@@ -218,12 +247,13 @@ class ShoppingCart private constructor(private val cartId: String, val projectio
 
             else -> {
                 Effect()
-                        .persist(CheckedOut(cartId, Instant.now()))
-                        .thenReply(cmd.replyTo) { updatedCart -> StatusReply.success(updatedCart.toSummary()) }
+                    .persist(CheckedOut(cartId, Instant.now()))
+                    .thenReply(cmd.replyTo) { updatedCart -> StatusReply.success(updatedCart.toSummary()) }
 
             }
         }
     }
 
-    private fun onGetItem(state: State, cmd: Get): ReplyEffect<Event, State> = Effect().reply(cmd.replyTo, state.toSummary())
+    private fun onGetItem(state: State, cmd: Get): ReplyEffect<Event, State> =
+        Effect().reply(cmd.replyTo, state.toSummary())
 }

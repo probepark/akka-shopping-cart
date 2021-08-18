@@ -11,7 +11,6 @@ import akka.japi.function.Function
 import shopping.cart.proto.ShoppingCartService
 import shopping.cart.proto.ShoppingCartServiceHandlerFactory
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.CompletionStage
 
 
@@ -22,9 +21,13 @@ class ShoppingCartServer {
         fun start(host: String, port: Int, system: ActorSystem<*>, grpcService: ShoppingCartService) {
 
             val service: Function<HttpRequest, CompletionStage<HttpResponse>> =
-                    ServiceHandler.concatOrNotFound(
-                            ShoppingCartServiceHandlerFactory.create(grpcService, system),  // ServerReflection enabled to support grpcurl without import-path and proto parameters
-                            ServerReflection.create(listOf(ShoppingCartService.description), system))
+                ServiceHandler.concatOrNotFound(
+                    ShoppingCartServiceHandlerFactory.create(
+                        grpcService,
+                        system
+                    ),  // ServerReflection enabled to support grpcurl without import-path and proto parameters
+                    ServerReflection.create(listOf(ShoppingCartService.description), system)
+                )
 
             val bound: CompletionStage<ServerBinding> = Http.get(system).newServerAt(host, port).bind(service)
 
