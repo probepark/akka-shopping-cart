@@ -8,7 +8,6 @@ import shopping.order.proto.ShoppingOrderService
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
-
 class ShoppingOrderServiceImpl : ShoppingOrderService {
 
     private val logger: Logger = LoggerFactory.getLogger(javaClass)
