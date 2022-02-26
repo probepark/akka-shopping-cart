@@ -106,7 +106,7 @@ class ShoppingCart private constructor(private val cartId: String, private val p
 
         fun toSummary(): Summary = Summary(items, isCheckedOut())
 
-        fun itemCount(itemId String): Int? = items[itemId]
+        fun itemCount(itemId: String): Int? = items[itemId]
 
         fun isEmpty(): Boolean = items.isEmpty()
 
