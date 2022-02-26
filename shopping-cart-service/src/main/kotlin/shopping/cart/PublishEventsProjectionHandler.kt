@@ -65,7 +65,6 @@ class PublishEventsProjectionHandler(
                     .setTypeUrl("shopping-cart-service/${ItemAdded.getDescriptor().fullName}")
                     .build()
                     .toByteArray()
-
             }
             is ShoppingCart.CheckedOut -> {
                 val (cartId, _) = event

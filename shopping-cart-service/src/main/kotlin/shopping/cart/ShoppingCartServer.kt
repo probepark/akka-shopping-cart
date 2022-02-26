@@ -13,7 +13,6 @@ import shopping.cart.proto.ShoppingCartServiceHandlerFactory
 import java.time.Duration
 import java.util.concurrent.CompletionStage
 
-
 class ShoppingCartServer {
 
     companion object {
@@ -25,7 +24,7 @@ class ShoppingCartServer {
                     ShoppingCartServiceHandlerFactory.create(
                         grpcService,
                         system
-                    ),  // ServerReflection enabled to support grpcurl without import-path and proto parameters
+                    ), // ServerReflection enabled to support grpcurl without import-path and proto parameters
                     ServerReflection.create(listOf(ShoppingCartService.description), system)
                 )
 

@@ -11,15 +11,23 @@ import io.grpc.Status
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import shopping.cart.ShoppingCart.Checkout
-import shopping.cart.proto.*
+import shopping.cart.proto.AddItemRequest
+import shopping.cart.proto.AdjustItemQuantityRequest
+import shopping.cart.proto.Cart
+import shopping.cart.proto.CheckoutRequest
+import shopping.cart.proto.GetCartRequest
+import shopping.cart.proto.GetItemPopularityRequest
+import shopping.cart.proto.GetItemPopularityResponse
+import shopping.cart.proto.Item
+import shopping.cart.proto.RemoveItemRequest
+import shopping.cart.proto.ShoppingCartService
 import shopping.cart.repository.ItemPopularityRepository
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeoutException
 
-
 class ShoppingCartServiceImpl(system: ActorSystem<*>, private val itemPopularityRepository: ItemPopularityRepository) :
-        ShoppingCartService {
+    ShoppingCartService {
 
     private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
@@ -32,9 +40,9 @@ class ShoppingCartServiceImpl(system: ActorSystem<*>, private val itemPopularity
 
         private fun toProtoCart(cart: ShoppingCart.Summary): Cart {
             val protoItems =
-                    cart.items
-                            .map { Item.newBuilder().setItemId(it.key).setQuantity(it.value).build() }
-                            .toList()
+                cart.items
+                    .map { Item.newBuilder().setItemId(it.key).setQuantity(it.value).build() }
+                    .toList()
 
             return Cart.newBuilder().setCheckedOut(cart.checkedOut).addAllItems(protoItems).build()
         }
@@ -57,12 +65,14 @@ class ShoppingCartServiceImpl(system: ActorSystem<*>, private val itemPopularity
 
         logger.info("adding Item {} to cart {}", addItemRequest.itemId, addItemRequest.cartId)
 
-        val entityRef: EntityRef<ShoppingCart.Command> = sharding.entityRefFor(ShoppingCart.ENTITY_KEY, addItemRequest.cartId)
+        val entityRef: EntityRef<ShoppingCart.Command> =
+            sharding.entityRefFor(ShoppingCart.ENTITY_KEY, addItemRequest.cartId)
         val reply: CompletionStage<ShoppingCart.Summary> =
-                entityRef.askWithStatus(
-                        { replyTo ->
-                            ShoppingCart.AddItem(addItemRequest.itemId, addItemRequest.quantity, replyTo)
-                        }, timeout)
+            entityRef.askWithStatus(
+                { replyTo ->
+                    ShoppingCart.AddItem(addItemRequest.itemId, addItemRequest.quantity, replyTo)
+                }, timeout
+            )
         val cart: CompletionStage<Cart> = reply.thenApply(ShoppingCartServiceImpl::toProtoCart)
 
         return convertError(cart)
@@ -72,12 +82,13 @@ class ShoppingCartServiceImpl(system: ActorSystem<*>, private val itemPopularity
 
         logger.info("removing Item {} from cart {}", removeItemRequest.itemId, removeItemRequest.cartId)
 
-        val entityRef: EntityRef<ShoppingCart.Command> = sharding.entityRefFor(ShoppingCart.ENTITY_KEY, removeItemRequest.cartId)
+        val entityRef: EntityRef<ShoppingCart.Command> =
+            sharding.entityRefFor(ShoppingCart.ENTITY_KEY, removeItemRequest.cartId)
 
         val reply: CompletionStage<ShoppingCart.Summary> =
-                entityRef.askWithStatus({ replyTo ->
-                    ShoppingCart.RemoveItem(removeItemRequest.itemId, replyTo)
-                }, timeout)
+            entityRef.askWithStatus({ replyTo ->
+                ShoppingCart.RemoveItem(removeItemRequest.itemId, replyTo)
+            }, timeout)
 
         val cart: CompletionStage<Cart> = reply.thenApply(ShoppingCartServiceImpl::toProtoCart)
 
@@ -86,14 +97,23 @@ class ShoppingCartServiceImpl(system: ActorSystem<*>, private val itemPopularity
 
     override fun adjustItemQuantity(adjustItemQuantityRequest: AdjustItemQuantityRequest): CompletionStage<Cart> {
 
-        logger.info("adjusting Item quantity for item {} from cart {}", adjustItemQuantityRequest.itemId, adjustItemQuantityRequest.cartId)
+        logger.info(
+            "adjusting Item quantity for item {} from cart {}",
+            adjustItemQuantityRequest.itemId,
+            adjustItemQuantityRequest.cartId
+        )
 
-        val entityRef: EntityRef<ShoppingCart.Command> = sharding.entityRefFor(ShoppingCart.ENTITY_KEY, adjustItemQuantityRequest.cartId)
+        val entityRef: EntityRef<ShoppingCart.Command> =
+            sharding.entityRefFor(ShoppingCart.ENTITY_KEY, adjustItemQuantityRequest.cartId)
 
         val reply: CompletionStage<ShoppingCart.Summary> =
-                entityRef.askWithStatus({ replyTo ->
-                    ShoppingCart.AdjustItemQuantity(adjustItemQuantityRequest.itemId, adjustItemQuantityRequest.quantity, replyTo)
-                }, timeout)
+            entityRef.askWithStatus({ replyTo ->
+                ShoppingCart.AdjustItemQuantity(
+                    adjustItemQuantityRequest.itemId,
+                    adjustItemQuantityRequest.quantity,
+                    replyTo
+                )
+            }, timeout)
 
         val cart: CompletionStage<Cart> = reply.thenApply(ShoppingCartServiceImpl::toProtoCart)
 
@@ -105,7 +125,10 @@ class ShoppingCartServiceImpl(system: ActorSystem<*>, private val itemPopularity
         logger.info("checkout {}", checkoutRequest.cartId)
 
         val entityRef = sharding.entityRefFor(ShoppingCart.ENTITY_KEY, checkoutRequest.cartId)
-        val reply = entityRef.askWithStatus({ replyTo: ActorRef<StatusReply<ShoppingCart.Summary>> -> Checkout(replyTo) }, timeout)
+        val reply = entityRef.askWithStatus(
+            { replyTo: ActorRef<StatusReply<ShoppingCart.Summary>> -> Checkout(replyTo) },
+            timeout
+        )
         val cart = reply.thenApply(ShoppingCartServiceImpl::toProtoCart)
 
         return convertError(cart)
@@ -119,7 +142,8 @@ class ShoppingCartServiceImpl(system: ActorSystem<*>, private val itemPopularity
         val reply = entityRef.ask({ replyTo: ActorRef<ShoppingCart.Summary> -> ShoppingCart.Get(replyTo) }, timeout)
         val cart = reply.thenApply { summary: ShoppingCart.Summary ->
             if (summary.items.isEmpty()) throw GrpcServiceException(
-                    Status.NOT_FOUND.withDescription("Cart " + getCartRequest.cartId.toString() + " not found")) else return@thenApply toProtoCart(summary)
+                Status.NOT_FOUND.withDescription("Cart " + getCartRequest.cartId.toString() + " not found")
+            ) else return@thenApply toProtoCart(summary)
         }
 
         return convertError(cart)
@@ -130,7 +154,8 @@ class ShoppingCartServiceImpl(system: ActorSystem<*>, private val itemPopularity
         logger.info("getItemPopularity for item {}", getItemPopularityRequest.itemId)
 
         val itemPopularity = CompletableFuture.supplyAsync(
-                { itemPopularityRepository.findById(getItemPopularityRequest.itemId) }, blockingJdbcExecutor)
+            { itemPopularityRepository.findById(getItemPopularityRequest.itemId) }, blockingJdbcExecutor
+        )
 
         return itemPopularity.thenApply { popularity ->
             val count: Long = popularity.map(ItemPopularity::count).orElse(0L)

@@ -102,7 +102,8 @@ akka.discovery.config.services.shopping-cart-service.endpoints = [
                                 )
                             }
                     }
-                })
+                }
+            )
         }
 
         @AfterClass
@@ -134,7 +135,8 @@ akka.discovery.config.services.shopping-cart-service.endpoints = [
                     .addTask(
                         CoordinatedShutdown.PhaseBeforeServiceUnbind(),
                         "close-test-client-for-grpc",
-                        Supplier { client?.close() })
+                        Supplier { client?.close() }
+                    )
             }
             return client
         }

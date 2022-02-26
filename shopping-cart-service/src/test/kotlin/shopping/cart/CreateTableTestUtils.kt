@@ -25,11 +25,13 @@ object CreateTableTestUtils {
         SchemaUtils.dropIfExists(system).toCompletableFuture()[30, TimeUnit.SECONDS]
         SchemaUtils.createIfNotExists(system).toCompletableFuture()[30, TimeUnit.SECONDS]
         JdbcProjection.dropOffsetTableIfExists(
-                { HibernateJdbcSession(transactionManager) }, system)
-                .toCompletableFuture()[30, TimeUnit.SECONDS]
+            { HibernateJdbcSession(transactionManager) }, system
+        )
+            .toCompletableFuture()[30, TimeUnit.SECONDS]
         JdbcProjection.createOffsetTableIfNotExists(
-                { HibernateJdbcSession(transactionManager) }, system)
-                .toCompletableFuture()[30, TimeUnit.SECONDS]
+            { HibernateJdbcSession(transactionManager) }, system
+        )
+            .toCompletableFuture()[30, TimeUnit.SECONDS]
         dropCreateUserTables(system)
         LoggerFactory.getLogger(CreateTableTestUtils::class.java).info("Tables created")
     }
@@ -45,7 +47,7 @@ object CreateTableTestUtils {
         val path = Paths.get("ddl-scripts/create_user_tables.sql")
         if (path.toFile().exists()) {
             SchemaUtils.applyScript("DROP TABLE IF EXISTS public.item_popularity;", system)
-                    .toCompletableFuture()[30, TimeUnit.SECONDS]
+                .toCompletableFuture()[30, TimeUnit.SECONDS]
             val script = Files.lines(path, StandardCharsets.UTF_8).collect(Collectors.joining("\n"))
             SchemaUtils.applyScript(script, system).toCompletableFuture()[30, TimeUnit.SECONDS]
         }

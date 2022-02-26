@@ -10,7 +10,6 @@ import org.springframework.transaction.TransactionStatus
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import java.sql.Connection
 import java.sql.SQLException
-import java.util.*
 import javax.persistence.EntityManager
 
 /**
@@ -23,7 +22,9 @@ import javax.persistence.EntityManager
  * envelope offset. Then used in combination with JdbcProjection.exactlyOnce method, the user
  * handler code and the offset store operation participates on the same transaction.
  */
-class HibernateJdbcSession(private val transactionManager: JpaTransactionManager) : DefaultTransactionDefinition(), JdbcSession {
+class HibernateJdbcSession(private val transactionManager: JpaTransactionManager) :
+    DefaultTransactionDefinition(),
+    JdbcSession {
     private val transactionStatus: TransactionStatus = transactionManager.getTransaction(this)
 
     private fun entityManager(): EntityManager {
@@ -34,15 +35,16 @@ class HibernateJdbcSession(private val transactionManager: JpaTransactionManager
         val entityManager = entityManager()
         val hibernateSession = entityManager.delegate as Session
         return hibernateSession.doReturningWork(
-                ReturningWork { connection ->
-                    try {
-                        return@ReturningWork func.apply(connection)
-                    } catch (e: SQLException) {
-                        throw e
-                    } catch (e: Exception) {
-                        throw SQLException(e)
-                    }
-                })
+            ReturningWork { connection ->
+                try {
+                    return@ReturningWork func.apply(connection)
+                } catch (e: SQLException) {
+                    throw e
+                } catch (e: Exception) {
+                    throw SQLException(e)
+                }
+            }
+        )
     }
 
     override fun commit() {

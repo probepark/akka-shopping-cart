@@ -8,10 +8,9 @@ import com.typesafe.config.ConfigFactory
 import org.junit.Before
 import org.junit.ClassRule
 import org.junit.Test
-import shopping.cart.ShoppingCart.*
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 internal class ShoppingCartTest {
 
@@ -20,13 +19,14 @@ internal class ShoppingCartTest {
         @ClassRule
         @JvmField
         val testKit: TestKitJunitResource = TestKitJunitResource(
-                ConfigFactory.parseString("""akka.actor.serialization-bindings {"shopping.cart.CborSerializable" = jackson-cbor}""")
-                        .withFallback(EventSourcedBehaviorTestKit.config()))
+            ConfigFactory.parseString("""akka.actor.serialization-bindings {"shopping.cart.CborSerializable" = jackson-cbor}""")
+                .withFallback(EventSourcedBehaviorTestKit.config())
+        )
 
         private const val CART_ID = "testCart"
 
         private val eventSourcedTestKit: EventSourcedBehaviorTestKit<Command, Event, State> =
-                EventSourcedBehaviorTestKit.create(testKit.system(), ShoppingCart.create(CART_ID))
+            EventSourcedBehaviorTestKit.create(testKit.system(), ShoppingCart.create(CART_ID))
     }
 
     @Before
@@ -37,7 +37,7 @@ internal class ShoppingCartTest {
     @Test
     fun addAnItemToCart() {
         val result: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
 
         assertTrue(result.reply().isSuccess)
         val (items) = result.reply().value
@@ -49,12 +49,12 @@ internal class ShoppingCartTest {
     @Test
     fun rejectAlreadyAddedItem() {
         val result1: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
 
         assertTrue(result1.reply().isSuccess)
 
         val result2: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
 
         assertTrue(result2.reply().isError)
         assertTrue(result2.hasNoEvents())
@@ -63,11 +63,11 @@ internal class ShoppingCartTest {
     @Test
     fun checkout() {
         val result1: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
         assertTrue(result1.reply().isSuccess)
 
         val result2: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> Checkout(replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> Checkout(replyTo) }
         assertTrue(result2.reply().isSuccess)
         assertTrue(result2.event() is CheckedOut)
         assertEquals(CART_ID, result2.event().cartId)
@@ -76,29 +76,29 @@ internal class ShoppingCartTest {
     @Test
     fun rejectCheckout() {
         val result1: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
         assertTrue(result1.reply().isSuccess)
 
         val result2: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> Checkout(replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> Checkout(replyTo) }
         assertTrue(result2.reply().isSuccess)
         assertTrue(result2.event() is CheckedOut)
         assertEquals(CART_ID, result2.event().cartId)
 
         val result3: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
         assertTrue(result3.reply().isError)
         assertTrue(result3.hasNoEvents())
-
     }
 
     @Test
     fun getACart() {
         val result1: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
         assertTrue(result1.reply().isSuccess)
 
-        val result2: CommandResultWithReply<Command, Event, State, Summary> = eventSourcedTestKit.runCommand { replyTo -> Get(replyTo) }
+        val result2: CommandResultWithReply<Command, Event, State, Summary> =
+            eventSourcedTestKit.runCommand { replyTo -> Get(replyTo) }
         assertFalse(result2.reply().checkedOut)
         assertEquals(1, result2.reply().items.size)
         assertEquals(42, result2.reply().items["foo"]!!.toInt())
@@ -107,15 +107,15 @@ internal class ShoppingCartTest {
     @Test
     fun getACheckedOutCart() {
         val result1: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
         assertTrue(result1.reply().isSuccess)
 
         val result2: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> Checkout(replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> Checkout(replyTo) }
         assertTrue(result2.reply().isSuccess)
 
         val result3: CommandResultWithReply<Command, Event, State, Summary> =
-                eventSourcedTestKit.runCommand { replyTo -> Get(replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> Get(replyTo) }
         assertTrue(result3.reply().checkedOut)
         assertEquals(1, result3.reply().items.size)
         assertEquals(42, result3.reply().items["foo"]!!.toInt())
@@ -124,11 +124,11 @@ internal class ShoppingCartTest {
     @Test
     fun removeAnItemFromCart() {
         val result1: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", 42, replyTo) }
         assertTrue(result1.reply().isSuccess)
 
         val result2: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> RemoveItem("foo", replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> RemoveItem("foo", replyTo) }
         assertTrue(result2.reply().isSuccess)
 
         assertTrue(result2.event() is ItemRemoved)
@@ -139,7 +139,7 @@ internal class ShoppingCartTest {
     fun adjustAnItemQuantityInCart() {
         val quantity1 = 42
         val result1: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", quantity1, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", quantity1, replyTo) }
         assertTrue(result1.reply().isSuccess)
 
         val (items1) = result1.reply().value
@@ -149,7 +149,7 @@ internal class ShoppingCartTest {
 
         val quantity2 = 35
         val result2: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AdjustItemQuantity("foo", quantity2, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AdjustItemQuantity("foo", quantity2, replyTo) }
         assertTrue(result2.reply().isSuccess)
 
         val (items2) = result2.reply().value
@@ -162,7 +162,7 @@ internal class ShoppingCartTest {
     fun adjustAnItemQuantityInCartWithZeroQuantity() {
         val quantity1 = 42
         val result1: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", quantity1, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AddItem("foo", quantity1, replyTo) }
         assertTrue(result1.reply().isSuccess)
 
         val (items1) = result1.reply().value
@@ -172,9 +172,8 @@ internal class ShoppingCartTest {
 
         val quantity2 = 0
         val result2: CommandResultWithReply<Command, Event, State, StatusReply<Summary>> =
-                eventSourcedTestKit.runCommand { replyTo -> AdjustItemQuantity("foo", quantity2, replyTo) }
+            eventSourcedTestKit.runCommand { replyTo -> AdjustItemQuantity("foo", quantity2, replyTo) }
         assertTrue(result2.reply().isError)
         assertTrue(result2.hasNoEvents())
     }
-
 }

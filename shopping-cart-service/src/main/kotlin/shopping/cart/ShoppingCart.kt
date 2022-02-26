@@ -10,15 +10,22 @@ import akka.cluster.sharding.typed.javadsl.Entity
 import akka.cluster.sharding.typed.javadsl.EntityTypeKey
 import akka.pattern.StatusReply
 import akka.persistence.typed.PersistenceId
-import akka.persistence.typed.javadsl.*
+import akka.persistence.typed.javadsl.CommandHandlerWithReply
+import akka.persistence.typed.javadsl.CommandHandlerWithReplyBuilderByState
+import akka.persistence.typed.javadsl.EventHandler
+import akka.persistence.typed.javadsl.EventSourcedBehavior
+import akka.persistence.typed.javadsl.EventSourcedBehaviorWithEnforcedReplies
+import akka.persistence.typed.javadsl.ReplyEffect
+import akka.persistence.typed.javadsl.RetentionCriteria
 import com.fasterxml.jackson.annotation.JsonCreator
-import shopping.cart.ShoppingCart.*
+import shopping.cart.ShoppingCart.Command
+import shopping.cart.ShoppingCart.Event
+import shopping.cart.ShoppingCart.State
 import java.time.Duration.ofMillis
 import java.time.Duration.ofSeconds
 import java.time.Instant
-import java.util.*
+import java.util.Optional
 import kotlin.math.abs
-
 
 class ShoppingCart private constructor(private val cartId: String, private val projectionTag: String) :
     EventSourcedBehaviorWithEnforcedReplies<Command, Event, State>(
@@ -31,10 +38,12 @@ class ShoppingCart private constructor(private val cartId: String, private val p
         val TAGS = listOf("carts-0", "carts-1", "carts-2", "carts-3", "carts-4")
 
         fun init(system: ActorSystem<*>) {
-            ClusterSharding.get(system).init(Entity.of(ENTITY_KEY) { entityContext ->
-                val selectedTag = getSelectedTag(entityContext.entityId)
-                create(entityContext.entityId, selectedTag)
-            })
+            ClusterSharding.get(system).init(
+                Entity.of(ENTITY_KEY) { entityContext ->
+                    val selectedTag = getSelectedTag(entityContext.entityId)
+                    create(entityContext.entityId, selectedTag)
+                }
+            )
         }
 
         fun create(cartId: String, projectionTag: String = getSelectedTag(cartId)): Behavior<Command> {
@@ -97,7 +106,7 @@ class ShoppingCart private constructor(private val cartId: String, private val p
 
         fun toSummary(): Summary = Summary(items, isCheckedOut())
 
-        fun itemCount(itemId: String): Int? = items[itemId]
+        fun itemCount(itemId String): Int? = items[itemId]
 
         fun isEmpty(): Boolean = items.isEmpty()
 
@@ -249,7 +258,6 @@ class ShoppingCart private constructor(private val cartId: String, private val p
                 Effect()
                     .persist(CheckedOut(cartId, Instant.now()))
                     .thenReply(cmd.replyTo) { updatedCart -> StatusReply.success(updatedCart.toSummary()) }
-
             }
         }
     }

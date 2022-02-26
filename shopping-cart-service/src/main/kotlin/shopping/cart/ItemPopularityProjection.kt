@@ -15,7 +15,7 @@ import akka.projection.jdbc.javadsl.JdbcProjection
 import org.springframework.orm.jpa.JpaTransactionManager
 import shopping.cart.repository.HibernateJdbcSession
 import shopping.cart.repository.ItemPopularityRepository
-import java.util.*
+import java.util.Optional
 
 sealed class ItemPopularityProjection {
 
@@ -23,42 +23,46 @@ sealed class ItemPopularityProjection {
 
         @JvmStatic
         fun init(
-                system: ActorSystem<*>,
-                transactionManager: JpaTransactionManager,
-                repository: ItemPopularityRepository) {
+            system: ActorSystem<*>,
+            transactionManager: JpaTransactionManager,
+            repository: ItemPopularityRepository
+        ) {
 
             ShardedDaemonProcess.get(system)
-                    .init(
-                            ProjectionBehavior.Command::class.java,
-                            "ItemPopularityProjection",
-                            ShoppingCart.TAGS.size,
-                            { index ->
-                                ProjectionBehavior.create(
-                                    createProjectionFor(system, transactionManager, repository, index)
-                                )
-                            },
-                            ShardedDaemonProcessSettings.create(system),
-                            Optional.of(ProjectionBehavior.stopMessage()))
+                .init(
+                    ProjectionBehavior.Command::class.java,
+                    "ItemPopularityProjection",
+                    ShoppingCart.TAGS.size,
+                    { index ->
+                        ProjectionBehavior.create(
+                            createProjectionFor(system, transactionManager, repository, index)
+                        )
+                    },
+                    ShardedDaemonProcessSettings.create(system),
+                    Optional.of(ProjectionBehavior.stopMessage())
+                )
         }
 
         @JvmStatic
         private fun createProjectionFor(
-                system: ActorSystem<*>,
-                transactionManager: JpaTransactionManager,
-                repository: ItemPopularityRepository,
-                index: Int):
-                ExactlyOnceProjection<Offset, EventEnvelope<ShoppingCart.Event>> {
+            system: ActorSystem<*>,
+            transactionManager: JpaTransactionManager,
+            repository: ItemPopularityRepository,
+            index: Int
+        ):
+            ExactlyOnceProjection<Offset, EventEnvelope<ShoppingCart.Event>> {
 
             val tag = ShoppingCart.TAGS[index]
             val sourceProvider: SourceProvider<Offset, EventEnvelope<ShoppingCart.Event>> =
-                    EventSourcedProvider.eventsByTag(system, JdbcReadJournal.Identifier(), tag)
+                EventSourcedProvider.eventsByTag(system, JdbcReadJournal.Identifier(), tag)
 
             return JdbcProjection.exactlyOnce(
-                    ProjectionId.of("ItemPopularityProjection", tag),
-                    sourceProvider,
-                    { HibernateJdbcSession(transactionManager) },
-                    { ItemPopularityProjectionHandler(tag, repository) },
-                    system)
+                ProjectionId.of("ItemPopularityProjection", tag),
+                sourceProvider,
+                { HibernateJdbcSession(transactionManager) },
+                { ItemPopularityProjectionHandler(tag, repository) },
+                system
+            )
         }
     }
 }

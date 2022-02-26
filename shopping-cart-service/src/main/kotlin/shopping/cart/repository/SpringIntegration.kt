@@ -1,6 +1,5 @@
 package shopping.cart.repository
 
-import akka.Done
 import akka.actor.typed.ActorSystem
 import com.typesafe.config.Config
 import org.springframework.context.ApplicationContext

@@ -12,7 +12,6 @@ import shopping.cart.repository.SpringIntegration.Companion.applicationContext
 import shopping.order.proto.ShoppingOrderService
 import shopping.order.proto.ShoppingOrderServiceClient
 
-
 object Main {
     private val logger = LoggerFactory.getLogger(Main::class.java)
 

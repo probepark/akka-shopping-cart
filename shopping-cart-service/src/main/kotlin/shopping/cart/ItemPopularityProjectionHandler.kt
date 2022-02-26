@@ -9,7 +9,7 @@ import shopping.cart.repository.HibernateJdbcSession
 import shopping.cart.repository.ItemPopularityRepository
 
 class ItemPopularityProjectionHandler(val tag: String, private val itemPopularityRepository: ItemPopularityRepository) :
-        JdbcHandler<EventEnvelope<ShoppingCart.Event>, HibernateJdbcSession>() {
+    JdbcHandler<EventEnvelope<ShoppingCart.Event>, HibernateJdbcSession>() {
 
     private val logger: Logger = LoggerFactory.getLogger(javaClass)
 
@@ -23,10 +23,11 @@ class ItemPopularityProjectionHandler(val tag: String, private val itemPopularit
             val updatedItemPop = existingItemPop.changeCount(quantity.toLong())
             itemPopularityRepository.save(updatedItemPop)
             logger.info(
-                    "ItemPopularityProjectionHandler({}) item popularity for '{}': [{}]",
-                    tag,
-                    itemId,
-                    updatedItemPop.count)
+                "ItemPopularityProjectionHandler({}) item popularity for '{}': [{}]",
+                tag,
+                itemId,
+                updatedItemPop.count
+            )
         } else {
             // skip all other events, such as `CheckedOut`
         }

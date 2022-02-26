@@ -19,7 +19,7 @@ import org.apache.kafka.common.serialization.ByteArraySerializer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.springframework.orm.jpa.JpaTransactionManager
 import shopping.cart.repository.HibernateJdbcSession
-import java.util.*
+import java.util.Optional
 import java.util.function.Supplier
 
 sealed class PublishEventsProjection {
@@ -54,7 +54,8 @@ sealed class PublishEventsProjection {
             val sendProducer: SendProducer<String, ByteArray> = SendProducer(producerSettings, system)
 
             CoordinatedShutdown.get(system)
-                .addTask(CoordinatedShutdown.PhaseActorSystemTerminate(),
+                .addTask(
+                    CoordinatedShutdown.PhaseActorSystemTerminate(),
                     "close-sendProducer",
                     Supplier { sendProducer.close() }
                 )

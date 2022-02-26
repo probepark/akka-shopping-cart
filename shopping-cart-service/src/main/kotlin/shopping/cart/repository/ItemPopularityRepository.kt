@@ -2,7 +2,7 @@ package shopping.cart.repository
 
 import org.springframework.data.repository.Repository
 import shopping.cart.ItemPopularity
-import java.util.*
+import java.util.Optional
 
 interface ItemPopularityRepository : Repository<ItemPopularity, String> {
 
